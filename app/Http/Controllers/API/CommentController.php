@@ -22,10 +22,20 @@ class CommentController extends Controller
         $user->notify(new CommentAdded( ));
         return response()->json(['comment' => $comment], 201);
     }
-    public function update(Request $request, Post $post, $commentId)
+public function update(Request $request, Post $post, $commentId)
 {
     $validatedData = $request->validate(['content' => 'required|string']);
-    $comment = $post->comments()->where('id', $commentId)->where('user_id', Auth::id())->firstOrFail();
+    
+    $post = Post::find($post->id);
+    if (!$post) {
+        return response()->json(['message' => 'Post not found'], 404);
+    }
+
+    $comment = $post->comments()->where('id', $commentId)->where('user_id', Auth::id())->first();
+    if (!$comment) {
+        return response()->json(['message' => 'Comment not found'], 404);
+    }
+
     $comment->update(['content' => $validatedData['content']]);
     return response()->json(['comment' => $comment], 200);
 }

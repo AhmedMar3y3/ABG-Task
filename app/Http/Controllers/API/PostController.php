@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Post;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
 
 class PostController extends Controller
@@ -27,32 +28,48 @@ class PostController extends Controller
         return response()->json(['post' => $post], 201);
     }
 
-    public function show(Post $post)
+    public function show($id)
     {
-        $post->load(['user:id,name,image', 'likes.user:id,name', 'comments.user:id,name']);
+        try {
+            $post = Post::with(['user:id,name,image', 'likes.user:id,name', 'comments.user:id,name'])
+                        ->findOrFail($id);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Post not found'], 404);
+        }
+
         return response()->json(['post' => $post]);
     }
 
-    public function update(Request $request, Post $post)
+    public function update(Request $request, $id)
     {
+        try {
+            $post = Post::findOrFail($id);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Post not found'], 404);
+        }
+
         if (Auth::id() !== $post->user_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        $this->authorize('update', $post);
-        
+
         $validatedData = $request->validate(['content' => 'required|string']);
         $post->update($validatedData);
 
         return response()->json(['post' => $post]);
     }
 
-    public function destroy(Post $post)
+    public function destroy($id)
     {
+        try {
+            $post = Post::findOrFail($id);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Post not found'], 404);
+        }
+
         if (Auth::id() !== $post->user_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $this->authorize('delete', $post);
         $post->delete();
         return response()->json(['message' => 'Post deleted successfully']);
     }
